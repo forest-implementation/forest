@@ -21,20 +21,6 @@ defmodule ForestTest do
     assert INode.inorder(node) == [4, 5, 6]
   end
 
-  def sort_compare(a, val) when a.data < val, do: %{false: val}
-  def sort_compare(_, val), do: %{true: val}
-
-  test "insert single minmax sort" do
-    # with single element
-    tree = INode.new(10, & &1)
-    tree = INode.insert(tree, 5, &sort_compare/2, & &1)
-    tree = INode.insert(tree, 2, &sort_compare/2, & &1)
-    tree = INode.insert(tree, 1, &sort_compare/2, & &1)
-    tree = INode.insert(tree, 3, &sort_compare/2, & &1)
-
-    assert INode.inorder(tree) == [10, 5, 3, 2, 1]
-  end
-
   def split_range(node) do
     min = Enum.min(node.range)
     max = Enum.max(node.range)
@@ -58,7 +44,7 @@ defmodule ForestTest do
   def endcond(node), do: Enum.count(node.range) <= 1 or Enum.empty?(node.data)
 
   test "sort init" do
-    tree = INode.new([1, 2, 3, 4, 5, 6, 7] |> Enum.shuffle(), &minmax/1)
+    tree = INode.new([7, 5, 3, 4, 6, 2, 1], &minmax/1)
 
     assert INode.init(tree, &split_range/1, &in_range/2, &endcond/1) |> INode.leaves() == [
              [1],
@@ -71,7 +57,7 @@ defmodule ForestTest do
            ]
   end
 
-  test "insert multi range" do
+  test "init multi range" do
     tree = INode.new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], &minmax/1)
 
     assert INode.init(tree, &split_range/1, &in_range/2, &endcond/1) == %INode{
@@ -145,7 +131,7 @@ defmodule ForestTest do
     end
   end
 
-  test "find element" do
+  test "find element outlier" do
     node = %INode{
       data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       range: 1..10,
@@ -167,5 +153,13 @@ defmodule ForestTest do
              right: nil,
              depth: 4
            }
+  end
+
+  test "find element novelty" do
+    tree = INode.new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], fn _ -> -100..100 end)
+    tree = INode.init(tree, &split_range/1, &in_range/2, &endcond/1) |> IO.inspect()
+
+    assert INode.find(tree, 99, &findfun/2).depth == 2
+    assert INode.find(tree, 5, &findfun/2).depth == 8
   end
 end

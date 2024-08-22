@@ -5,22 +5,6 @@ defmodule INode do
     %INode{data: data, range: rangefun.(data)}
   end
 
-  def insert(nil, value, _comparefun, rangefun), do: new(value, rangefun)
-
-  def insert(
-        %INode{data: _, range: _, left: left, right: right} = node,
-        value,
-        comparefun,
-        rangefun
-      ) do
-    case comparefun.(node, value) do
-      %{false: leftdata} -> %INode{node | left: insert(left, leftdata, comparefun, rangefun)}
-      %{true: rightdata} -> %INode{node | right: insert(right, rightdata, comparefun, rangefun)}
-      # for now, we do not insert duplicates
-      0 -> node
-    end
-  end
-
   def init(node, split_range_fun, filterrangefun, endcond) do
     {leftrange, rightrange} = split_range_fun.(node)
 
@@ -63,11 +47,10 @@ defmodule INode do
       true -> [value]
       false -> leaves(left) ++ leaves(right)
     end
-
   end
 
   def find(%INode{range: range, left: left, right: right} = node, element, find_fun) do
-    if Enum.min(range) == Enum.max(range) do
+    if left == nil and right == nil do
       node
     else
       case find_fun.(node, element) do
