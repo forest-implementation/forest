@@ -1,5 +1,5 @@
 defmodule INode do
-  defstruct data: nil, range: nil, left: nil, right: nil
+  defstruct data: nil, range: nil, left: nil, right: nil, depth: 0
 
   def new(data, rangefun) do
     %INode{data: data, range: rangefun.(data)}
@@ -28,20 +28,20 @@ defmodule INode do
       {filterrangefun.(node.data, leftrange), filterrangefun.(node.data, rightrange)}
 
     if endcond.(node) == true do
-      %INode{data: node.data, range: node.range}
+      %INode{data: node.data, range: node.range, depth: node.depth}
     else
       %INode{
         node
         | left:
             init(
-              %INode{data: leftdata, range: leftrange},
+              %INode{data: leftdata, range: leftrange, depth: node.depth + 1},
               split_range_fun,
               filterrangefun,
               endcond
             ),
           right:
             init(
-              %INode{data: rightdata, range: rightrange},
+              %INode{data: rightdata, range: rightrange, depth: node.depth + 1},
               split_range_fun,
               filterrangefun,
               endcond
