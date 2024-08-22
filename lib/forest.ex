@@ -8,7 +8,7 @@ defmodule INode do
   def insert(nil, value, _comparefun, rangefun), do: new(value, rangefun)
 
   def insert(
-        %INode{data: _, range: range, left: left, right: right} = node,
+        %INode{data: _, range: _, left: left, right: right} = node,
         value,
         comparefun,
         rangefun
@@ -22,7 +22,7 @@ defmodule INode do
   end
 
   def init(node, split_range_fun, filterrangefun, endcond) do
-    {leftrange, rightrange} = split_range_fun.(node.range)
+    {leftrange, rightrange} = split_range_fun.(node)
 
     {leftdata, rightdata} =
       {filterrangefun.(node.data, leftrange), filterrangefun.(node.data, rightrange)}
@@ -54,6 +54,27 @@ defmodule INode do
 
   def inorder(%INode{data: value, left: left, right: right}) do
     inorder(left) ++ [value] ++ inorder(right)
+  end
+
+  def leaves(nil), do: []
+
+  def leaves(%INode{data: value, left: left, right: right}) do
+    case left == nil and right == nil do
+      true -> [value]
+      false -> leaves(left) ++ leaves(right)
+    end
+
+  end
+
+  def find(%INode{range: range, left: left, right: right} = node, element, find_fun) do
+    if Enum.min(range) == Enum.max(range) do
+      node
+    else
+      case find_fun.(node, element) do
+        0 -> find(left, element, find_fun)
+        1 -> find(right, element, find_fun)
+      end
+    end
   end
 end
 
