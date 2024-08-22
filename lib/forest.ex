@@ -49,7 +49,7 @@ defmodule INode do
     end
   end
 
-  def find(%INode{range: range, left: left, right: right} = node, element, find_fun) do
+  def find(%INode{range: _, left: left, right: right} = node, element, find_fun) do
     if left == nil and right == nil do
       node
     else
