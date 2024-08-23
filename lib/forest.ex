@@ -1,5 +1,5 @@
 defmodule INode do
-  defstruct data: nil, range: nil, left: nil, right: nil, depth: 0
+  defstruct data: nil, range: nil, left: nil, right: nil, dim: 0, depth: 0
 
   def new(data, rangefun) do
     %INode{data: data, range: rangefun.(data)}
