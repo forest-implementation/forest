@@ -5,30 +5,32 @@ defmodule INode do
     %INode{data: data, range: rangefun.(data)}
   end
 
-  def init(node, split_range_fun, filterrangefun, endcond) do
-    {leftrange, rightrange} = split_range_fun.(node)
+  def init(node, split_range_fun, filterrangefun, endcond, dim_fun) do
+    {leftrange, rightrange} = split_range_fun.(node, node.dim)
 
     {leftdata, rightdata} =
-      {filterrangefun.(node.data, leftrange), filterrangefun.(node.data, rightrange)}
+      {filterrangefun.(node.data, leftrange, node.dim), filterrangefun.(node.data, rightrange, node.dim)}
 
     if endcond.(node) == true do
-      %INode{data: node.data, range: node.range, depth: node.depth}
+      %INode{data: node.data, range: node.range, depth: node.depth, dim: node.dim}
     else
       %INode{
         node
         | left:
             init(
-              %INode{data: leftdata, range: leftrange, depth: node.depth + 1},
+              %INode{data: leftdata, range: leftrange, depth: node.depth + 1, dim: dim_fun.(node)},
               split_range_fun,
               filterrangefun,
-              endcond
+              endcond,
+              dim_fun
             ),
           right:
             init(
-              %INode{data: rightdata, range: rightrange, depth: node.depth + 1},
+              %INode{data: rightdata, range: rightrange, depth: node.depth + 1, dim: dim_fun.(node)},
               split_range_fun,
               filterrangefun,
-              endcond
+              endcond,
+              dim_fun
             )
       }
     end
@@ -53,7 +55,7 @@ defmodule INode do
     if left == nil and right == nil do
       node
     else
-      case find_fun.(node, element) do
+      case find_fun.(node, element, node.dim) do
         0 -> find(left, element, find_fun)
         1 -> find(right, element, find_fun)
       end

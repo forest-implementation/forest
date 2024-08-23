@@ -1,10 +1,12 @@
 defmodule Service.Outlier do
+  def split_range(node, dim), do: split_range(node, &Service.RandomSeed.generate_float/2, dim)
 
-  def split_range(node), do: split_range(node, &Service.RandomSeed.generate/2)
+  def split_range(node, randfun, dim) do
+    {new_list, {min, max} = removed_element} = Service.Common.remove_at_index(node.range, dim)
 
-  def split_range(node, randfun) do
-    # get random value between min and max of data
-    sp = node.data |> Enum.min_max |> then(fn {min, max} -> randfun.(min, max) end)
-    {{Enum.min(node.data), sp}, {sp, Enum.max(node.data)}}
+    sp = removed_element |> then(fn {min, max} -> randfun.(min, max) end)
+    {novy_levy, novy_pravy} = {{min, sp}, {sp, max}}
+
+    {List.insert_at(new_list,dim, novy_levy), List.insert_at(new_list, dim, novy_pravy)}
   end
 end
