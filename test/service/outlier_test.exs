@@ -52,10 +52,20 @@ defmodule ServiceOutlierTest do
   end
 
   test "outlier forest" do
-    :rand.seed(:exsplus, {1224, 67892, 54321})
-    Forest.init(5, [[7], [2], [4], [1], [8], [9]], &Service.Outlier.split_data/1)
-    |> Forest.evaluate([7], &Service.Outlier.decision/2) |> IO.inspect(charlists: :as_lists)
-    Forest.init(25, [[7,5], [2,4], [4,3], [1,1], [8,11], [9,6]], &Service.Outlier.split_data/1)
-    |> Forest.evaluate([7,2], &Service.Outlier.decision/2) |> IO.inspect(charlists: :as_lists)
+    :rand.seed(:exsplus, {1224, 64892, 54321})
+
+    assert Forest.init(5, [[7], [2], [4], [1], [8], [9]], &Service.Outlier.split_data/1)
+    |> Forest.evaluate([7], &Service.Outlier.decision/2)
+    |> Enum.map(fn %{data: _, depth: d} -> d end)
+    == [4, 2, 3, 4, 3]
+
+    assert Forest.init(
+      5,
+      [[7, 5], [2, 4], [4, 3], [1, 1], [8, 11], [9, 6]],
+      &Service.Outlier.split_data/1
+    )
+    |> Forest.evaluate([7, 2], &Service.Outlier.decision/2)
+    |> Enum.map(fn %{data: _, depth: d} -> d end)
+    == [1, 2, 4, 3, 3]
   end
 end

@@ -22,33 +22,4 @@ defmodule Service.Common do
     |> Enum.map(fn sublist -> Enum.at(sublist, n) end)
   end
 
-
-  def minmax(x, dim) do
-    take_dimension(x, dim) |> Enum.min_max()
-  end
-
-  # watch out, range is now an array of tuples
-  def in_range(elements, ranges, dim) do
-    {min,max} = Enum.at(ranges, dim)
-    # one_dim_elements = elements |> take_dimension(dim) |> IO.inspect
-
-    Enum.filter(elements, fn element ->
-      Enum.at(element,dim) >= min and Enum.at(element,dim) <= max
-    end)
-  end
-
-  def endcond(node), do: length(node.data) <= 1
-
-  def findfun(node, element, dim) do
-    if Service.Common.in_range([element], node.left.range, dim) |> length == 0 do
-      1
-    else
-      0
-    end
-  end
-
-  def dimfun(node) do
-    alldims = length(Enum.at(node.data, 0))
-    Service.RandomSeed.generate_int(0, alldims-1)
-  end
 end

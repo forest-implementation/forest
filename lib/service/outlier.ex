@@ -7,14 +7,26 @@ defmodule Service.Outlier do
   def split_data(%{:data => [a], :depth => d}), do: {%{depth: d, data: a}}
 
   def split_data(%{:data => data, :depth => depth}) do
-    dimension = Service.RandomSeed.generate_int(0, (data |> hd |> length) - 1)
-    one_dimension_data = data |> Service.Common.take_dimension(dimension)
-    {min, max} = one_dimension_data |> Enum.min_max()
-    sp = Service.RandomSeed.generate_float(min, max)
+    # dimension switching if not available to go further (e.g. all data are same)
+    dimension =
+      0..((data |> hd |> length) - 1)
+      |> Enum.to_list()
+      |> Enum.shuffle()
+      |> Enum.find(:not_found, fn x ->
+        data |> Service.Common.take_dimension(x) |> Enum.uniq() |> length > 1
+      end)
 
-    %{true => left, false => right} = data |> Enum.group_by(&decision(&1, {dimension, sp}))
+    case dimension do
+      :not_found ->
+        {%{depth: depth, data: data}}
 
-    {{dimension, sp}, %{data: left, depth: depth + 1}, %{data: right, depth: depth + 1}}
+      _ ->
+        one_dimension_data = data |> Service.Common.take_dimension(dimension)
+        {min, max} = one_dimension_data |> Enum.min_max()
+        sp = Service.RandomSeed.generate_float(min, max)
+        %{true => left, false => right} = data |> Enum.group_by(&decision(&1, {dimension, sp}))
+        {{dimension, sp}, %{data: left, depth: depth + 1}, %{data: right, depth: depth + 1}}
+    end
   end
 
   def split_data(%{:data => data}), do: split_data(%{:data => data, :depth => 0})
