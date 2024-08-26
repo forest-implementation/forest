@@ -1,99 +1,51 @@
 defmodule INode do
-  defstruct data: nil, range: nil, dim: 0, sp: 0, depth: 0, left: nil, right: nil
+  defstruct carrier: nil, left: nil, right: nil
 
-  def new(data, rangefun) do
-    %INode{data: data, range: rangefun.(data)}
-  end
+  def from_data(data, split_data_fun) do
+    case split_data_fun.(data) do
+      {carrier, left_data, right_data} ->
+        %INode{
+          carrier: carrier,
+          left: from_data(left_data, split_data_fun),
+          right: from_data(right_data, split_data_fun)
+        }
 
-  def init(node, split_range_fun, filterrangefun, endcond, dim_fun) do
-    {leftrange, rightrange} = split_range_fun.(node, node.dim)
-
-    {leftdata, rightdata} =
-      {filterrangefun.(node.data, leftrange, node.dim),
-       filterrangefun.(node.data, rightrange, node.dim)}
-
-    if endcond.(node) == true do
-      %INode{data: node.data, range: node.range, depth: node.depth, dim: node.dim, sp: node.sp}
-    else
-      %INode{
-        node
-        | left:
-            init(
-              %INode{
-                data: leftdata,
-                range: leftrange,
-                depth: node.depth + 1,
-                dim: dim_fun.(node)
-              },
-              split_range_fun,
-              filterrangefun,
-              endcond,
-              dim_fun
-            ),
-          right:
-            init(
-              %INode{
-                data: rightdata,
-                range: rightrange,
-                depth: node.depth + 1,
-                dim: dim_fun.(node)
-              },
-              split_range_fun,
-              filterrangefun,
-              endcond,
-              dim_fun
-            )
-      }
+      {carrier} ->
+        %INode{carrier: carrier, left: nil, right: nil}
     end
   end
 
   def inorder(nil), do: []
 
-  def inorder(%INode{data: value, left: left, right: right}) do
+  def inorder(%INode{carrier: value, left: left, right: right}) do
     inorder(left) ++ [value] ++ inorder(right)
   end
 
   def leaves(nil), do: []
+  def leaves(%INode{carrier: value, left: nil, right: nil}), do: [value]
+  def leaves(%INode{carrier: _value, left: left, right: right}), do: leaves(left) ++ leaves(right)
 
-  def leaves(%INode{data: value, left: left, right: right}) do
-    case left == nil and right == nil do
-      true -> [value]
-      false -> leaves(left) ++ leaves(right)
-    end
-  end
+  def find(_, %INode{carrier: carry, left: nil, right: nil}, _), do: carry
 
-  def find(%INode{range: _, left: left, right: right} = node, element, find_fun) do
-    if left == nil and right == nil do
-      node
-    else
-      case find_fun.(node, element, node.dim) do
-        0 -> find(left, element, find_fun)
-        1 -> find(right, element, find_fun)
-      end
+  def find(element, %INode{carrier: carry, left: left, right: right}, decisionfun) do
+    case decisionfun.(element, carry) do
+      true -> find(element, left, decisionfun)
+      false -> find(element, right, decisionfun)
     end
   end
 end
 
 defmodule Forest do
-  def init(n, data, initrangefun, splitfun, decisionfun, endcond, dimfun) do
+  def init(n, data, splitfun) do
     Enum.map(1..n, fn _ ->
-      tree =
-        INode.new(
-          data,
-          initrangefun
-        )
-
-      INode.init(
-        tree,
-        splitfun,
-        decisionfun,
-        endcond,
-        dimfun
+      INode.from_data(
+        data,
+        splitfun
       )
     end)
   end
 
-  def evaluate(forest, item, findfun) do
-    forest |> Enum.map(fn tree -> INode.find(tree, item, findfun) end)
+  def evaluate(forest, item, decisionfun) do
+    forest |> Enum.map(fn tree -> INode.find(item, tree, decisionfun) end)
   end
 end
