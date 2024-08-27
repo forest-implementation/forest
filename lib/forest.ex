@@ -36,10 +36,12 @@ defmodule INode do
 end
 
 defmodule Forest do
-  def init(n, data, splitfun) do
-    Enum.map(1..n, fn _ ->
+  def init(n, data, splitfun), do: init(n, data, splitfun, fn x, _ -> x end)
+
+  def init(n, data, splitfun, batchfun) do
+    Enum.map(1..n, fn i ->
       INode.from_data(
-        data,
+        batchfun.(data, i),
         splitfun
       )
     end)
