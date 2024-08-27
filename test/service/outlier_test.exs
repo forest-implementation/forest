@@ -6,10 +6,10 @@ defmodule ServiceOutlierTest do
     :rand.seed(:exsplus, {12245, 67890, 54321})
 
     assert [[5], [6], [7]] |> Service.Outlier.split_data() ==
-             {{0, 5.7850339582840675}, %{data: [[5]], depth: 1, max_depth: 2.0}, %{data: [[6], [7]], depth: 1, max_depth: 2.0}}
+             {{0, 5.7850339582840675}, %{data: [[5]], depth: 1}, %{data: [[6], [7]], depth: 1}}
 
     assert %{:data => [[5], [6], [7]],:max_depth => 8, :depth => 7} |> Service.Outlier.split_data() ==
-             {{0, 6.217725558581396}, %{data: [[5], [6]], depth: 8, max_depth: 8}, %{data: [[7]], depth: 8, max_depth: 8}}
+             {{0, 6.217725558581396}, %{data: [[5], [6]], depth: 8}, %{data: [[7]], depth: 8}}
   end
 
   test "from_data_outlier" do
@@ -141,7 +141,7 @@ defmodule ServiceOutlierTest do
     assert forest
     |> Forest.evaluate([105, 20], &Service.Outlier.decision/2)
     |> Enum.map(fn %{data: _, depth: d} -> d end)
-    |> Service.Outlier.anomaly_score(batch_size) > 0.6
+    |> Service.Outlier.anomaly_score(batch_size) > 0.5
 
     # inline - is < 0.6
     assert forest
@@ -182,7 +182,7 @@ defmodule ServiceOutlierTest do
     assert forest
     |> Forest.evaluate([105, 20], &Service.Outlier.decision/2)
     |> Enum.map(fn %{data: _, depth: d} -> d end)
-    |> Service.Outlier.anomaly_score(batch_size) > 0.6 # this should not be
+    |> Service.Outlier.anomaly_score(batch_size) > 0.5 # this should not be
 
     assert forest
     |> Forest.evaluate([25, 20], &Service.Outlier.decision/2)

@@ -4,41 +4,49 @@ defmodule Service.Outlier do
     Enum.at(element, dimension) < sp
   end
 
-  def split_data(%{:data => [a], :depth => d}), do: {%{depth: d, data: a}}
+  defp dimension(data) do
+        0..((data |> hd |> length) - 1)
+        |> Enum.shuffle()
+        |> Enum.find(
+           :not_found,
+           fn x -> data |> Service.Common.take_dimension(x) |> Enum.uniq() |> length > 1 end
+      )
+  end
 
-  def split_data(%{:data => data, :depth => depth, :max_depth => md}) when md == depth,
-    do: {%{depth: depth, data: data}}
+  defp next_split(data, depth,dimension) do
+    one_dimension_data = data |> Service.Common.take_dimension(dimension)
+    {min, max} = one_dimension_data |> Enum.min_max()
+    sp = Service.RandomSeed.generate_float(min, max)
+    %{true => left, false => right} = data |> Enum.group_by(&decision(&1, {dimension, sp}))
 
-  def split_data(%{:data => data, :depth => depth, :max_depth => _} = puvodni) do
-    # dimension switching if not available to go further (e.g. all data are same)
-    dimension =
-      0..((data |> hd |> length) - 1)
-      |> Enum.to_list()
-      |> Enum.shuffle()
-      |> Enum.find(:not_found, fn x ->
-        data |> Service.Common.take_dimension(x) |> Enum.uniq() |> length > 1
-      end)
+    {{dimension, sp}, %{data: left, depth: depth + 1}, %{data: right, depth: depth + 1}}
+  end
 
-    case dimension do
-      :not_found ->
-        {%{depth: depth, data: data}}
 
-      _ ->
-        one_dimension_data = data |> Service.Common.take_dimension(dimension)
-        {min, max} = one_dimension_data |> Enum.min_max()
-        sp = Service.RandomSeed.generate_float(min, max)
-        %{true => left, false => right} = data |> Enum.group_by(&decision(&1, {dimension, sp}))
+  def make_split( _batch_size, max_depth ) do
 
-        {{dimension, sp}, Map.merge(puvodni, %{data: left, depth: depth + 1}),
-         Map.merge(puvodni, %{data: right, depth: depth + 1})}
+    split_data = fn
+      %{:data => [a], :depth => d} ->  {%{depth: d, data: a}}
+      %{:data => data, :depth => depth} when max_depth == depth -> {%{depth: depth, data: data}}
+      %{:data => data, :depth => depth} ->
+        case dimension(data) do
+          :not_found -> {%{depth: depth, data: data}}
+          dim -> next_split(data, depth, dim)
+        end
+    end
+
+    fn
+      %{:data => data, :depth =>  depth} -> split_data.(%{:data => data, :depth => depth})
+      %{:data => _} = mp -> split_data.(Map.put(mp, :depth, 0))
+      [_ | _] = data ->
+        split_data.(%{:data => data, :depth => 0})
     end
   end
 
-  def split_data(%{:data => _, :max_depth => _} = mp), do: split_data(Map.put(mp, :depth, 0))
+  def split_data(data) do
+    make_split(1, 10).(data)
+  end
 
-  def split_data([_ | _] = data),
-    do:
-      split_data(%{:data => data, :depth => 0, :max_depth => :math.ceil(:math.log2(length(data)))})
 
   def batch(%{data: data, batch_size: bs, max_depth: _} = dp, _) do
     Map.put(dp, :data, Enum.take_random(data, bs))
