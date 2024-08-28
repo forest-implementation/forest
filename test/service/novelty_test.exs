@@ -74,7 +74,7 @@ defmodule ServiceNoveltyTest do
     |> IO.inspect()
   end
 
-  test "clanek data" do
+  test "clanek data NOT UNIQUE" do
     data = [
       [25, 100],
       [30, 90],
@@ -87,7 +87,8 @@ defmodule ServiceNoveltyTest do
       [95, 15],
       [90, 30],
       [90, 20],
-      [90, 10]
+      [90, 10],
+      [90, 10],
     ]
 
     forest =
