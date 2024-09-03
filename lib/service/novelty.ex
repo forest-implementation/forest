@@ -4,7 +4,7 @@ defmodule Service.Novelty do
   end
 
   def next_split(%{data: data, ranges: ranges, depth: depth}) do
-    dimension = Service.RandomSeed.generate_int(0, (data |> hd |> length) - 1)
+    dimension = Helper.RandomSeed.generate_int(0, (data |> hd |> length) - 1)
 
     # lets split range in two .. start,
     {min, max} = Enum.at(ranges, dimension)
@@ -25,11 +25,20 @@ defmodule Service.Novelty do
 
   def make_split(max_depth) do
     fn
-      %{data: [_], depth: _} = dp -> {dp}
-      %{data: [], depth: _} = dp -> {dp}
-      %{data: _, ranges: _, depth: d} = dp when d == max_depth -> {dp}
-      %{data: _, ranges: _, depth: _} = dp -> next_split(dp)
-      %{data: data, ranges: ranges} -> make_split(max_depth).(%{:data => data, :ranges => ranges, :depth => 0})
+      %{data: [_], depth: _} = dp ->
+        {dp}
+
+      %{data: [], depth: _} = dp ->
+        {dp}
+
+      %{data: _, ranges: _, depth: d} = dp when d == max_depth ->
+        {dp}
+
+      %{data: _, ranges: _, depth: _} = dp ->
+        next_split(dp)
+
+      %{data: data, ranges: ranges} ->
+        make_split(max_depth).(%{:data => data, :ranges => ranges, :depth => 0})
     end
   end
 
@@ -37,7 +46,7 @@ defmodule Service.Novelty do
     %{dp | data: data |> Enum.take_random(bs)}
   end
 
-  def ecko(depths) do
+  def avg(depths) do
     Enum.sum(depths) / length(depths)
   end
 
@@ -53,8 +62,6 @@ defmodule Service.Novelty do
   end
 
   def anomaly_score(depths, batch_size) do
-    :math.pow(2, -ecko(depths) / average_path_length_c(batch_size))
+    :math.pow(2, -avg(depths) / H.h(batch_size))
   end
-
-
 end

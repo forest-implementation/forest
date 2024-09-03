@@ -1,0 +1,6 @@
+%{
+  "hacko": {:git, "https://github.com/forest-implementation/hacko.git", "07d0dcec8ef96c9228034ec664e792b2067c2bd0", []},
+  "memoize": {:hex, :memoize, "1.4.3", "ead4ba248291acbaecbfe7e68ed762d329dd9c29c727020c7393dda4060c4471", [:mix], [], "hexpm", "a75176b84b9ce92faaf567c82fcbc584ef95727e0827cb38606b0a197f7e47ef"},
+  "nimble_csv": {:hex, :nimble_csv, "1.2.0", "4e26385d260c61eba9d4412c71cea34421f296d5353f914afe3f2e71cce97722", [:mix], [], "hexpm", "d0628117fcc2148178b034044c55359b26966c6eaa8e2ce15777be3bbc91b12a"},
+  "statistex": {:hex, :statistex, "1.0.0", "f3dc93f3c0c6c92e5f291704cf62b99b553253d7969e9a5fa713e5481cd858a5", [:mix], [], "hexpm", "ff9d8bee7035028ab4742ff52fc80a2aa35cece833cf5319009b52f1b5a86c27"},
+}

@@ -16,7 +16,7 @@ defmodule Service.Outlier do
   defp next_split(data, depth, dimension) do
     one_dimension_data = data |> Service.Common.take_dimension(dimension)
     {min, max} = one_dimension_data |> Enum.min_max()
-    sp = Service.RandomSeed.generate_float(min, max)
+    sp = Helper.RandomSeed.generate_float(min, max)
     %{true => left, false => right} = data |> Enum.group_by(&decision(&1, {dimension, sp}))
 
     {{dimension, sp}, %{data: left, depth: depth + 1}, %{data: right, depth: depth + 1}}

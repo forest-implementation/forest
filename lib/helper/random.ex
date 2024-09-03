@@ -1,4 +1,4 @@
-defmodule Service.RandomSeed do
+defmodule Helper.RandomSeed do
   def generate_float(min, max) do
     random_value = :rand.uniform()
     scaled_value = min + random_value * (max - min)
