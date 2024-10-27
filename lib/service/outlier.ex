@@ -16,7 +16,7 @@ defmodule Service.Outlier do
   defp next_split(data, depth, dimension) do
     one_dimension_data = data |> Service.Common.take_dimension(dimension)
     {min, max} = one_dimension_data |> Enum.min_max()
-    sp = Helper.RandomSeed.generate_float(min, max)
+    sp = Randixir.float(min, max)
     %{true => left, false => right} = data |> Enum.group_by(&decision(&1, {dimension, sp}))
 
     {{dimension, sp}, %{data: left, depth: depth + 1}, %{data: right, depth: depth + 1}}
@@ -48,10 +48,6 @@ defmodule Service.Outlier do
         split_data.(%{:data => data, :depth => 0})
     end
   end
-
-  # def split_data(data, batch_size = 1, max_depth = 10) do
-  #   make_split(max_depth).(data)
-  # end
 
   def batch(%{data: data, batch_size: bs}, _) do
     %{data: Enum.take_random(data, bs)}

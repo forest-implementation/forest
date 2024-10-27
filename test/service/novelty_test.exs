@@ -111,22 +111,18 @@ defmodule ServiceNoveltyTest do
     assert forest
            |> Forest.evaluate([25, 85], &Service.Outlier.decision/2)
            |> Enum.map(fn
-             %{data: [], depth: depth} -> depth - 1
              %{data: data, depth: depth} -> depth + H.h(length(data))
            end)
-           |> Service.Novelty.anomaly_score(batch_size)
-           |> IO.inspect() < 0.5
+           |> Service.Novelty.anomaly_score(batch_size) < 0.5
 
     # 0.40 < 0.454H
 
     assert forest
            |> Forest.evaluate([25, 20], &Service.Outlier.decision/2)
            |> Enum.map(fn
-             %{data: [], depth: depth} -> depth - 1
              %{data: data, depth: depth} -> depth + H.h(length(data))
            end)
-           |> Service.Novelty.anomaly_score(batch_size)
-           |> IO.inspect() > 0.6
+           |> Service.Novelty.anomaly_score(batch_size) > 0.6
 
     forest2 =
       Forest.init(
@@ -139,29 +135,24 @@ defmodule ServiceNoveltyTest do
     assert forest2
            |> Forest.evaluate([105, 20], &Service.Outlier.decision/2)
            |> Enum.map(fn
-             %{data: [], depth: depth} -> depth - 1
              %{data: data, depth: depth} -> depth + H.h(length(data))
            end)
-           |> Service.Novelty.anomaly_score(batch_size)
-           |> IO.inspect() < 0.5
+           |> Service.Novelty.anomaly_score(batch_size) < 0.5
 
     assert forest2
            |> Forest.evaluate([25, 20], &Service.Outlier.decision/2)
            |> Enum.map(fn
-             %{data: [], depth: depth} -> depth - 1
              %{data: data, depth: depth} -> depth + H.h(length(data))
            end)
-           |> Service.Novelty.anomaly_score(batch_size)
-           |> IO.inspect() > 0.6
+           |> Service.Novelty.anomaly_score(batch_size) > 0.6
 
     # 0.636 < 0.673H
   end
 
-  def anomaly_score_map(forest, x, batch_size) do
+  defp anomaly_score_map(forest, x, batch_size) do
     forest
     |> Forest.evaluate(x, &Service.Outlier.decision/2)
     |> Enum.map(fn
-      %{data: [], depth: depth} -> depth - 1
       %{data: data, depth: depth} -> depth + H.h(length(data))
     end)
     |> Service.Novelty.anomaly_score(batch_size)
@@ -197,71 +188,16 @@ defmodule ServiceNoveltyTest do
       )
 
     test_data = [
-      [25, 100],
-      [30, 90],
-      [20, 90],
-      [35, 85],
-      [25, 85],
-      [15, 85],
-      [105, 20],
-      [95, 25],
-      [95, 15],
-      [90, 30],
       [90, 20],
       [90, 10],
       # novelty
       [25, 20],
       # novelty
-      [55, 50],
-      [100, 95],
-      [35, 95]
+      [55, 50]
     ]
 
-    test_data
-    |> Enum.map(&anomaly_score_map(forest, &1, batch_size))
-    |> IO.inspect(charlists: :as_lists)
-  end
-
-  test "csv data" do
-    %{"0" => regular, "1" => novelty} =
-      Helper.MyCSVParser.load_csv("data/Banknote_Authentication.csv")
-      |> Enum.group_by(fn row -> Enum.at(row, -1) end, fn val ->
-        Enum.drop(val, -1) |> Enum.map(&String.to_float/1)
-      end)
-
-    [r70, r20, r10, _] = Helper.ArraySplitter.split(regular, [70, 20, 10])
-    [n80, n20, _] = Helper.ArraySplitter.split(novelty, [80, 20])
-
-    {length(r70), length(r20), length(r10), length(r70 ++ r20 ++ r10)}
-    {length(n80), length(n20), length(n80 ++ n20)}
-
-    # 10% of data
-    batch_size = div(length(r70), 10)
-
-    init_range =
-      0..(length(Enum.at(r70, 0)) - 1)
-      |> Enum.map(&Helper.Statistics.adjusted_box(r70, &1))
-
-    forest =
-      Forest.init(
-        50,
-        %{data: r70, ranges: init_range, batch_size: batch_size},
-        Service.Novelty.make_split(ceil(H.h(length(r70)))),
-        &Service.Novelty.batch/2
-      )
-
-    "novelty #{n80 |> length}" |> IO.inspect()
-
-    n80
-    |> Enum.map(&anomaly_score_map(forest, &1, batch_size))
-    |> Enum.count(fn {[_|_], score} -> score > 0.6 end)
-    |> IO.inspect(charlists: :as_lists)
-
-    "regular #{r20 |> length}" |> IO.inspect()
-
-    r20
-    |> Enum.map(&anomaly_score_map(forest, &1, batch_size))
-    |> Enum.count(fn {[_|_], score} -> score < 0.6 end)
-    |> IO.inspect(charlists: :as_lists)
+    assert test_data
+           |> Enum.map(&anomaly_score_map(forest, &1, batch_size))
+           |> Enum.map(fn {_, score} -> score > 0.6 end) == [false, false, true, true]
   end
 end

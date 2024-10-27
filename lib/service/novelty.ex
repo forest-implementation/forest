@@ -4,7 +4,7 @@ defmodule Service.Novelty do
   end
 
   def next_split(%{data: data, ranges: ranges, depth: depth}) do
-    dimension = Helper.RandomSeed.generate_int(0, (data |> hd |> length) - 1)
+    dimension = Randixir.int(0, (data |> hd |> length) - 1)
 
     # lets split range in two .. start,
     {min, max} = Enum.at(ranges, dimension)
