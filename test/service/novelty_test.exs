@@ -201,7 +201,42 @@ defmodule ServiceNoveltyTest do
            |> Enum.map(fn {_, score} -> score > 0.6 end) == [false, false, true, true]
   end
 
-  test "u nekterych dat pada na rangi {same,same}" do
-    
+  test "test with all data same" do
+    # when all data is the same, the robust statistics tends to fail
+    # we can leverage Statistex.Robus.Boostrap method which can estimate reasonable range even if the data is same
+
+    input_data = [
+      [3.0],
+      [3.0],
+      [3.0],
+      [3.0]
+    ]
+
+    batch_size = length(input_data)
+
+    ranges =
+      0..(length(Enum.at(input_data, 0)) - 1)
+      |> Enum.map(&Statistex.Robust.Bootstrap.extrapolate(input_data, 30, 0.5, &1))
+
+    forest =
+      Forest.init(
+        10,
+        %{data: input_data, ranges: ranges, batch_size: batch_size},
+        Service.Novelty.make_split(ceil(H.h(length(input_data)))),
+        &Service.Novelty.batch/2
+      )
+
+    test_data = [
+      [3.0],
+      [3.0],
+      # novelty
+      [5.0],
+      # novelty
+      [-20.0]
+    ]
+
+    assert test_data
+           |> Enum.map(&anomaly_score_map(forest, &1, batch_size))
+           |> Enum.map(fn {_, score} -> score > 0.6 end) == [false, false, true, true]
   end
 end

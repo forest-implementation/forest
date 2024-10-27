@@ -19,13 +19,14 @@ end
   end)
 
 [r70, r20, _r10, _] = ArraySplitter.split(regular, [70, 20, 10])
+
 [n80, _n20, _] = ArraySplitter.split(novelty, [80, 20])
 
 batch_size = 100
 
 init_range =
   0..(length(Enum.at(r70, 0)) - 1)
-  |> Enum.map(&Statistex.Robust.adjusted_box(r70, &1))
+  |> Enum.map(&Statistex.Robust.Bootstrap.extrapolate(r70, 30, 0.07, &1))
 
 IO.inspect(init_range, label: "INIT range")
 

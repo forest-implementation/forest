@@ -7,7 +7,7 @@ defmodule Service.Novelty do
     dimension = Randixir.int(0, (data |> hd |> length) - 1)
 
     # lets split range in two .. start,
-    {min, max} = Enum.at(ranges, dimension) |> IO.inspect
+    {min, max} = Enum.at(ranges, dimension)
 
     sp = Service.Tuple.midpoint({min, max})
 
