@@ -200,4 +200,8 @@ defmodule ServiceNoveltyTest do
            |> Enum.map(&anomaly_score_map(forest, &1, batch_size))
            |> Enum.map(fn {_, score} -> score > 0.6 end) == [false, false, true, true]
   end
+
+  test "u nekterych dat pada na rangi {same,same}" do
+    
+  end
 end

@@ -1,4 +1,4 @@
-defmodule Example.ArraySplitter do
+defmodule ArraySplitter do
   def split(array, percentages) do
     # Ensure the percentages sum to 100
     if Enum.sum(percentages) != 100 do

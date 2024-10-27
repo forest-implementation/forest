@@ -2,6 +2,17 @@
 
 **TODO: Add description**
 
+## Run tests
+
+```
+mix test
+```
+
+## Run examples
+```
+$ MIX_ENV=example mix run example/banknote_novelty.ex
+```
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed

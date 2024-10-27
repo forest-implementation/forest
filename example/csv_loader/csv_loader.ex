@@ -1,4 +1,4 @@
-defmodule Example.CSVLoader do
+defmodule CSVLoader do
   NimbleCSV.define(MyParser, separator: ",", escape: "\"")
 
   def load_csv(file_path) do
