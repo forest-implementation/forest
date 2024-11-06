@@ -13,7 +13,7 @@ anomaly_score_map_fn = fn forest, x, batch_size ->
 end
 
 %{"-1" => regular, "+1" => novelty} =
-  CSVLoader.load_csv("example/data/german_processed.csv")
+  CSVLoader.load_csv("example/data/other/german_processed.csv")
   |> Enum.group_by(fn row -> Enum.at(row, 0) end, fn val ->
     Enum.drop(val, 1) |> Enum.map(&String.to_float/1)
   end)
