@@ -62,7 +62,7 @@ defmodule Service.Novelty do
     2 * harmonic_num(batch_size - 1) - 2 * (batch_size - 1) / batch_size
   end
 
-  def anomaly_score(depths, batch_size) do
-    :math.pow(2, -avg(depths) / H.h(batch_size))
+  def anomaly_score(depths, batch_size, h_func \\ &H.h/1) do
+    :math.pow(2, -avg(depths) / h_func.(batch_size))
   end
 end
