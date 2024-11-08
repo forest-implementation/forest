@@ -6,4 +6,4 @@ andthen .pick(*)
 andthen .rotor(.elems * 0.7,.elems * 0.2, *)
 andthen |.[0] >>~>> ",TR", |.[1] >>~>> ",TE", |.[2] >>~>> ",VA"
 andthen .join("\n")
-andthen .put
+#andthen .map: *.put
