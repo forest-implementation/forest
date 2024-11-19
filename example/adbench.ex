@@ -25,10 +25,17 @@ defmodule Preprocessor do
   end
 
   defp hfun(0), do: 0
-  defp hfun(x) when x < 100 , do: H.h(x)
+  defp hfun(x) when x < 100, do: H.h(x)
+
   defp hfun(count) do
     :math.log2(count) + 1.332
   end
+
+  defp tpr(tp, p), do: tp / p
+
+  defp fpr(fp, n), do: fp / n
+
+  defp roc(tpr, fpr), do: tpr / (fpr + 0.000001)
 
   def preprocess(dataset_name) do
     %{"TE" => regular_test, "TR" => regular_train} =
@@ -53,13 +60,11 @@ defmodule Preprocessor do
   def experiment(
         {train, rtest, ntest},
         robustfun,
-        anomaly_treshold \\ [0.5, 0.55, 0.6],
+        anomaly_treshold \\ 400..600//5 |> Enum.map(&(&1 / 1000)),
         tree_count \\ 50,
-        scorefun \\ &anomaly_score_map/3
+        scorefun \\ &anomaly_score_map/3,
+        batch_size \\ min(128, 128)
       ) do
-    # 10% batch size
-    batch_size = div(length(train), 10)
-
     init_range =
       0..(length(Enum.at(train, 0)) - 1)
       |> Enum.map(&robustfun.(train, &1))
@@ -84,18 +89,27 @@ defmodule Preprocessor do
     r1 =
       rtest
       |> Enum.map(&scorefun.(forest, &1, batch_size))
-      |> then(
-          fn s ->
-            Enum.map(anomaly_treshold,&{&1, Enum.count(s,fn {[_ | _], score} -> score < &1 end)})
-          end
-        )
+      |> then(fn s ->
+        Enum.map(anomaly_treshold, &{&1, Enum.count(s, fn {[_ | _], score} -> score < &1 end)})
+      end)
 
     n1 =
       ntest
       |> Enum.map(&scorefun.(forest, &1, batch_size))
-      |> then(fn s -> Enum.map(anomaly_treshold,&{&1,Enum.count(s,fn {[_ | _], score} -> score < &1 end)}) end)
+      |> then(fn s ->
+        Enum.map(anomaly_treshold, &{&1, Enum.count(s, fn {[_ | _], score} -> score < &1 end)})
+      end)
 
-    {r1, n1}
+    roc =
+      Enum.zip_with([r1, n1], fn [{threshold, r}, {threshold, n}] ->
+        tpr = tpr(r, rtest |> length) #|> IO.inspect(label: "TPR")
+        fpr = fpr(n, ntest |> length) #|> IO.inspect(label: "FPR")
+        {threshold, roc(tpr, fpr)}
+      end)
+      |> then(fn x -> {1, x} end)
+
+    # [r1, n1]
+    # |> Enum.zip_with(fn [{v,r},{v,n}] -> {v,((Enum.count(ntest) - n) / (Enum.count(ntest) - n + Enum.count(rtest) - r))/(r/(r+n))} end)
   end
 end
 
