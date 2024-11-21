@@ -37,6 +37,8 @@ defmodule Preprocessor do
 
   defp roc(tpr, fpr), do: tpr / (fpr + 0.000001)
 
+  defp youden(tpr, fpr), do: tpr - fpr
+
   def preprocess(dataset_name) do
     %{"TE" => regular_test, "TR" => regular_train} =
       DataPreparator.adbench("example/data/adbench/csv/#{dataset_name}_TTV.csv", -2)
@@ -102,9 +104,11 @@ defmodule Preprocessor do
 
     roc =
       Enum.zip_with([r1, n1], fn [{threshold, r}, {threshold, n}] ->
-        tpr = tpr(r, rtest |> length) #|> IO.inspect(label: "TPR")
-        fpr = fpr(n, ntest |> length) #|> IO.inspect(label: "FPR")
-        {threshold, roc(tpr, fpr)}
+        # |> IO.inspect(label: "TPR")
+        tpr = tpr(r, rtest |> length)
+        # |> IO.inspect(label: "FPR")
+        fpr = fpr(n, ntest |> length)
+        {threshold, youden(tpr, fpr)}
       end)
       |> then(fn x -> {1, x} end)
 
