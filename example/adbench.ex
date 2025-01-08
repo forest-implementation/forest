@@ -1,3 +1,5 @@
+# MIX_ENV=example mix run example/adbench.ex
+
 Code.require_file("data_preparator/data_preparator.ex", __DIR__)
 Code.require_file("array_splitter/array_splitter.ex", __DIR__)
 
@@ -143,6 +145,7 @@ for dataset <- datasets do
   IO.inspect(dataset, label: "Dataset")
   {_, rtest, ntest} = tt = Preprocessor.preprocess(dataset)
 
+  # specify statistics
   {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.z_score(x, 3, y) end)
   # {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.adjusted_box(x, y) end)
 
