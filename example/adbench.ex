@@ -33,9 +33,26 @@ defmodule Preprocessor do
     :math.log2(count) + 1.332
   end
 
-  defp tpr(tp, p), do: tp / p
+  # recall, sensitivity
+  defp tpr({tp, f_n, _fp, _tn}), do: tp / (tp + f_n)
 
-  defp fpr(fp, n), do: fp / n
+  defp fpr({_tp, _f_n, fp, tn}), do: fp / (fp + tn)
+
+  # precision
+  defp ppv({tp, _f_n, fp, _tn}), do: tp / (tp + fp)
+
+  defp for({_tp, f_n, _fp, tn}), do: f_n / (f_n + tn)
+
+  # specificity
+  defp tnr({_tp, _f_n, fp, tn}), do: tn / (fp + tn)
+
+  defp fbeta(precision, recall, b) do
+    (1 + b * b) * (precision * recall) / (b * b * precision + recall)
+  end
+
+  defp fbeta2({tp, f_n, fp, tn}, b) do
+    (1 + b * b) * tp / ((1 + b * b) *tp + fp + b * b * f_n)
+  end
 
   defp roc(tpr, fpr), do: tpr / (fpr + 0.000001)
 
@@ -90,6 +107,7 @@ defmodule Preprocessor do
         &Service.Novelty.batch/2
       )
 
+    # TP - regulary oznacene jako regulary
     r1 =
       rtest
       |> Enum.map(&scorefun.(forest, &1, batch_size))
@@ -97,6 +115,7 @@ defmodule Preprocessor do
         Enum.map(anomaly_treshold, &{&1, Enum.count(s, fn {[_ | _], score} -> score < &1 end)})
       end)
 
+    # FP - novelties oznacene jako regulary
     n1 =
       ntest
       |> Enum.map(&scorefun.(forest, &1, batch_size))
@@ -107,12 +126,22 @@ defmodule Preprocessor do
     roc =
       Enum.zip_with([r1, n1], fn [{threshold, r}, {threshold, n}] ->
         # |> IO.inspect(label: "TPR")
-        tpr = tpr(r, rtest |> length)
-        # |> IO.inspect(label: "FPR")
-        fpr = fpr(n, ntest |> length)
-        {threshold, youden(tpr, fpr)}
+        tp = r
+        fp = n
+        f_n = (rtest |> length) - r
+        tn = (ntest |> length) - n
+
+        ctverice = {tp, f_n, fp, tn}
+
+        tpr = tpr(ctverice)
+        fpr = fpr(ctverice)
+        ppv = ppv(ctverice)
+
+        # vysledky:
+        # {threshold (ten generujeme - optimalizujeme), youden/roc.. - hodnota kterou maximalizujeme, tpr, fpr}
+        {threshold, fbeta2(ctverice, 2), tpr, r, fpr, n}
       end)
-      |> then(fn x -> {1, x} end)
+      |> then(fn x -> {"_", x} end)
 
     # [r1, n1]
     # |> Enum.zip_with(fn [{v,r},{v,n}] -> {v,((Enum.count(ntest) - n) / (Enum.count(ntest) - n + Enum.count(rtest) - r))/(r/(r+n))} end)
@@ -135,7 +164,7 @@ datasets =
   |> Enum.sort_by(&String.to_integer(Enum.at(&1, 2)))
   |> Enum.map(&Enum.at(&1, 1))
   # specify files to SKIP
-  |> then(fn soubory -> ["9_census"] |> Enum.flat_map(&List.delete(soubory, &1)) end)
+  |> Enum.reject(fn dataset -> Enum.member?(["3_backdoor","9_census"],dataset) end)
   |> IO.inspect()
 
 # or specify your own
