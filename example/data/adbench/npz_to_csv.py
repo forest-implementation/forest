@@ -7,7 +7,7 @@ import pathlib
 def npz_to_csv_with_format(file_path, output_dir):
     # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
-    
+
     # Load the data from the .npz file
     data = np.load(file_path)
 
@@ -35,8 +35,8 @@ def npz_to_csv_with_format(file_path, output_dir):
     print(f"Data saved to {output_csv}")
 
 
-npz_directory = "/home/adamo/scripts/forest/example/data/adbench/npz"
-output_dir = "/home/adamo/scripts/forest/example/data/adbench/csv"
+npz_directory = "/home/a_ulrich/source/forest/example/data/adbench/npz"
+output_dir = "/home/a_ulrich/source/forest/example/data/adbench/csv"
 
 for file_path in pathlib.Path(npz_directory).glob('*.npz'):
     npz_to_csv_with_format(file_path, output_dir)

@@ -1,17 +1,12 @@
-# MIX_ENV=example mix run example/adbench.ex
+# MIX_ENV=example mix run example/adbench_roc.ex
 
 Code.require_file("data_preparator/data_preparator.ex", __DIR__)
 Code.require_file("array_splitter/array_splitter.ex", __DIR__)
 
-defmodule Preprocessor do
-  # train = [1,2,3]
-  # init_range = [{1,1},{0,5},{5,5}]
+# spocita roc a ulozi do csv/ pro kazdy dataset
 
-  # init_range
-  # |> Preprocessor.nonzeroindices
-  # |> IO.inspect(label: "beru pouze dimenze:")
-  # |> then(fn indices -> Preprocessor.take(train, indices) end)
-  # |> IO.inspect
+defmodule Preprocessor do
+
   def take(array, indices) do
     array
     |> Enum.with_index()
@@ -65,7 +60,7 @@ defmodule Preprocessor do
     %{"TE" => novelty_test} =
       DataPreparator.adbench("example/data/adbench/csv/#{dataset_name}_TV.csv", -2)
 
-    {regular_train, regular_test, novelty_test}
+    {regular_train, regular_test, novelty_test, dataset_name}
   end
 
   defp anomaly_score_map(forest, x, batch_size) do
@@ -78,25 +73,34 @@ defmodule Preprocessor do
     |> then(fn res -> {x, res} end)
   end
 
-  def experiment(
-        {train, rtest, ntest},
+def auc(roc_data) do
+  # ROC data je list tuple (FPR, TPR) seřazený podle FPR
+  roc_data
+  |> Enum.sort_by(fn {fpr, _} -> fpr end)  # Seřadíme podle FPR
+  |> Enum.chunk_every(2, 1, :discard)  # Vezmeme sousední dvojice
+  |> Enum.map(fn [{fpr1, tpr1}, {fpr2, tpr2}] ->
+    # Trapezoidální pravidlo: (b-a) * (f(a) + f(b)) / 2
+    (fpr2 - fpr1) * (tpr1 + tpr2) / 2
+  end)
+  |> Enum.sum()  # Sečteme plochy pod křivkou
+end
+
+def experiment(
+        {train, rtest, ntest, dataset_name},
         robustfun,
-        anomaly_treshold \\ 10..1000//5 |> Enum.map(&(&1 / 1000)),
+        anomaly_treshold \\ 00000..200000//1 |> Enum.map(&(&1 / 10000)),
         tree_count \\ 50,
         scorefun \\ &anomaly_score_map/3,
         batch_size \\ min(128, 128)
       ) do
+
+    IO.inspect(dataset_name)
     init_range =
       0..(length(Enum.at(train, 0)) - 1)
       |> Enum.map(&robustfun.(train, &1))
 
-    # filter out dimensions where range was 0
     nozero = init_range |> nonzeroindices |> IO.inspect(label: "beru pouze dimenze:")
-
-    f_train =
-      train |> Enum.map(fn sloupec -> take(sloupec, nozero) end)
-
-    # do not forget to filter out the ranges also
+    f_train = train |> Enum.map(fn sloupec -> take(sloupec, nozero) end)
     f_init_range = take(init_range, nozero)
 
     forest =
@@ -107,7 +111,6 @@ defmodule Preprocessor do
         &Service.Novelty.batch/2
       )
 
-    # TP - regulary oznacene jako regulary
     r1 =
       rtest
       |> Enum.map(&scorefun.(forest, &1, batch_size))
@@ -115,7 +118,6 @@ defmodule Preprocessor do
         Enum.map(anomaly_treshold, &{&1, Enum.count(s, fn {[_ | _], score} -> score < &1 end)})
       end)
 
-    # FP - novelties oznacene jako regulary
     n1 =
       ntest
       |> Enum.map(&scorefun.(forest, &1, batch_size))
@@ -125,35 +127,30 @@ defmodule Preprocessor do
 
     roc =
       Enum.zip_with([r1, n1], fn [{threshold, r}, {threshold, n}] ->
-        # |> IO.inspect(label: "TPR")
         tp = r
         fp = n
         f_n = (rtest |> length) - r
         tn = (ntest |> length) - n
-
         ctverice = {tp, f_n, fp, tn}
 
         tpr = tpr(ctverice)
         fpr = fpr(ctverice)
-        # ppv = ppv(ctverice)
-
-        # vysledky:
-        # {threshold (ten generujeme - optimalizujeme), youden/roc.. - hodnota kterou maximalizujeme, tpr, fpr}
-        {threshold, fbeta2(ctverice, 2), tpr, r, fpr, n}
+        {threshold, fbeta2(ctverice, 2), tpr, fpr}
       end)
-      |> then(fn x -> {"_", x} end)
+      |> Enum.map(fn {_thresh, _fb, tpr, fpr} -> {fpr, tpr} end)
 
-    # [r1, n1]
-    # |> Enum.zip_with(fn [{v,r},{v,n}] -> {v,((Enum.count(ntest) - n) / (Enum.count(ntest) - n + Enum.count(rtest) - r))/(r/(r+n))} end)
-  end
+    auc_value = auc(roc)
+
+    File.write!("csv/roc_data#{dataset_name}_#{auc_value}.csv",
+      roc
+      |> Enum.map(fn {fpr, tpr} -> "#{fpr},#{tpr}" end)
+      |> Enum.join("\n")
+    )
+
+    IO.puts("AUC: #{auc_value}")
+    {"AUC", auc_value}
 end
-
-# TODO: TENTO SOUBOR BUDE SLOUZIT PRO NASTAVOVANI PARAMETRU ATP
-# MUZE SE SPOUSTET FURT DOKOLA NA SPECIFIKOVANYCH DATASETECH A SPECIFIKOVANCYH robust funkcich
-
-# TODO: pak bude dalsi soubor ktery bude uz experiment spoustet s parametry co si myslime ze jsou nejlepsi
-# a s validacnim csv (vlastne jen vymenis ve funkci priponu pred csv)
-# ten uz se spustit jen jednou a jeho vysledky pujdou do clanku
+end
 
 datasets =
   File.ls("example/data/adbench/csv")
@@ -172,11 +169,12 @@ datasets =
 
 for dataset <- datasets do
   IO.inspect(dataset, label: "Dataset")
-  {_, rtest, ntest} = tt = Preprocessor.preprocess(dataset)
+  {_, rtest, ntest, dataset_name} = tt = Preprocessor.preprocess(dataset)
+  IO.inspect(dataset_name)
 
   # specify statistics
-  {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.z_score(x, 3, y) end)
-  # {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.adjusted_box(x, y) end)
+  #{r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.z_score(x, 3, y) end)
+  {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.adjusted_box(x, y) end)
 
   "regular #{rtest |> length}" |> IO.inspect()
   r |> IO.inspect()

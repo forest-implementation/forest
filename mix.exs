@@ -24,7 +24,7 @@ defmodule Forest.MixProject do
       {:hacko, github: "forest-implementation/hacko"},
       {:randixir, "~> 0.1.0"},
       {:nimble_csv, "~> 1.1", only: :example},
-      {:statistex_robust, "~> 0.1.1", only: [:test, :example]}
+      {:statistex_robust, "~> 0.1.2", only: [:test, :example, :dev]},
     ]
   end
 end
