@@ -21,11 +21,23 @@ defmodule Preprocessor do
     |> Enum.map(fn {_, index} -> index end)
   end
 
-  defp hfun(0), do: 0
-  defp hfun(x) when x < 100, do: H.h(x)
+  defp cfun(0), do: 0
+  defp cfun(x) when x < 100, do: H.h(x)
 
-  defp hfun(count) do
+  defp cfun(count) do
     :math.log2(count) + 1.332
+  end
+
+  # jen pokus, zkusime jak to vyjde se starym c
+  def harmonic_num(n) do
+    1..n |> Stream.map(&(1.0 / &1)) |> Enum.sum()
+  end
+
+  def old_c_fun(n) when n < 2, do: 0
+  def old_c_fun(2), do: 1
+
+  def old_c_fun(batch_size) do
+    2 * harmonic_num(batch_size - 1) - 2 * (batch_size - 1) / batch_size
   end
 
   # recall, sensitivity
@@ -49,6 +61,17 @@ defmodule Preprocessor do
     (1 + b * b) * tp / ((1 + b * b) * tp + fp + 1.5 + b * b * f_n)
   end
 
+  def f1_score({tn, f_n, fp, tp}) do
+    precision = if tp + fp > 0, do: tp / (tp + fp), else: 0.0
+    recall = if tp + f_n > 0, do: tp / (tp + f_n), else: 0.0
+
+    if precision + recall > 0 do
+      2 * (precision * recall) / (precision + recall)
+    else
+      0.0
+    end
+  end
+
   defp roc(tpr, fpr), do: tpr / (fpr + 0.000001)
 
   defp youden(tpr, fpr), do: tpr - fpr
@@ -67,9 +90,9 @@ defmodule Preprocessor do
     forest
     |> Forest.evaluate(x, &Service.Novelty.decision/2)
     |> Enum.map(fn
-      %{data: data, depth: depth} -> depth + hfun(length(data))
+      %{data: data, depth: depth} -> depth + cfun(length(data))
     end)
-    |> Service.Novelty.anomaly_score(batch_size, &hfun/1)
+    |> Service.Novelty.anomaly_score(batch_size, &cfun/1)
     |> then(fn res -> {x, res} end)
   end
 
@@ -88,16 +111,18 @@ end
 def experiment(
         {train, rtest, ntest, dataset_name},
         robustfun,
-        anomaly_treshold \\ 00000..200000//1 |> Enum.map(&(&1 / 10000)),
-        tree_count \\ 50,
+        anomaly_treshold \\ 00000..2000//1 |> Enum.map(&(&1 / 100)),
+        tree_count \\ 100,
         scorefun \\ &anomaly_score_map/3,
-        batch_size \\ min(128, 128)
+        batch_size \\ min(1024, 1024)
       ) do
 
     IO.inspect(dataset_name)
     init_range =
       0..(length(Enum.at(train, 0)) - 1)
       |> Enum.map(&robustfun.(train, &1))
+
+
 
     nozero = init_range |> nonzeroindices |> IO.inspect(label: "beru pouze dimenze:")
     f_train = train |> Enum.map(fn sloupec -> take(sloupec, nozero) end)
@@ -107,7 +132,9 @@ def experiment(
       Forest.init(
         tree_count,
         %{data: f_train, ranges: f_init_range, batch_size: batch_size},
-        Service.Novelty.make_split(ceil(hfun(length(f_train)))),
+        # TODO: SET DEPTH FIXED
+        Service.Novelty.make_split(16),
+        # Service.Novelty.make_split(ceil(old_c_fun(length(f_train)))),
         &Service.Novelty.batch/2
       )
 
@@ -141,13 +168,22 @@ def experiment(
 
     auc_value = auc(roc)
 
-    File.write!("csv/roc_data#{dataset_name}_#{auc_value}.csv",
-      roc
-      |> Enum.map(fn {fpr, tpr} -> "#{fpr},#{tpr}" end)
+    results =
+      Enum.zip_with([r1, n1], fn [{threshold, r}, {threshold, n}] ->
+        tp = r
+        fp = n
+        f_n = (rtest |> length) - r
+        tn = (ntest |> length) - n
+        ctverice = {tp, f_n, fp, tn}
+        {threshold, f1_score(ctverice), f_n, fp, tp}
+      end)
+
+    File.write!("csv/fbeta_new/threshold_fbeta_#{dataset_name}.csv",
+      results
+      |> Enum.map(fn {threshold, fbeta, f_n,fp, tp} -> "#{threshold},#{f_n},#{fp},#{tp},#{fbeta}" end)
       |> Enum.join("\n")
     )
 
-    IO.puts("AUC: #{auc_value}")
     {"AUC", auc_value}
 end
 end
@@ -173,8 +209,12 @@ for dataset <- datasets do
   IO.inspect(dataset_name)
 
   # specify statistics
-  #{r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.z_score(x, 3, y) end)
-  {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.adjusted_box(x, y) end)
+
+  # {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.mad(x, 12, y) end)
+  {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.z_score(x, 3, y) end)
+  # {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.adjusted_box(x, y) end)
+  # bootstrap trva hrozne dlouho
+  # {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.Bootstrap.extrapolate(x, 100, 0.3 ,y) end)
 
   "regular #{rtest |> length}" |> IO.inspect()
   r |> IO.inspect()

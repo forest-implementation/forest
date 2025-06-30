@@ -8,6 +8,10 @@ defmodule Service.Novelty do
 
     # lets split range in two .. start,
     {min, max} = Enum.at(ranges, dimension)
+    # case min == max do
+    #   true -> "UZ NENI KAM SPLITOVAT" |> IO.inspect
+    #   _ -> "ok"
+    # end
 
     sp = Service.Tuple.midpoint({min, max})
 
@@ -63,6 +67,7 @@ defmodule Service.Novelty do
   end
 
   def anomaly_score(depths, batch_size, h_func \\ &H.h/1) do
+    #{avg(depths), h_func.(batch_size)}
     :math.pow(2, -avg(depths) / h_func.(batch_size))
   end
 end

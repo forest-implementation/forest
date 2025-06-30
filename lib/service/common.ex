@@ -6,6 +6,10 @@ defmodule Service.Tuple do
   def midpoint({min, max}) when min < max do
     (min + max) / 2
   end
+
+  def midpoint({min, max}) when min == max do
+    min
+  end
 end
 
 defmodule Service.Common do

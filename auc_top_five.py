@@ -36,7 +36,7 @@ top_5 = roc_curves[:5]
 plt.figure(figsize=(8, 8))
 
 for file, data, auc in top_5:
-    plt.plot(data["FPR"], data["TPR"], marker="o", linestyle="-", label=f"{file} (AUC={auc:.3f})")
+    plt.plot(data["FPR"], data["TPR"], marker="o", linestyle="-",markersize=1, label=f"{file} (AUC={auc:.3f})")
 
 # 🔹 Přidání referenční čáry
 plt.plot([0, 1], [0, 1], "r--", label="Random Guess")
