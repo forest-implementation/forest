@@ -1,32 +1,10 @@
-# Forest
+nejrpve spust nejaky pokus ktery vygeneruje csvcka:
 
-**TODO: Add description**
+(muzes si zvolit h funkci a taky dole si odkomentuj zscore nebo adjusted box)
 
-## Run tests
+MIX_ENV=example mix run example/adbench_pokus_nove_c.ex
 
-```
-mix test
-```
+a pak analyzuj grafy:
 
-## Run examples
-```
-$ MIX_ENV=example mix run example/banknote_novelty.ex
-```
-
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `forest` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:forest, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/forest>.
+python auc.py
 
