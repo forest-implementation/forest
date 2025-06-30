@@ -21,12 +21,10 @@ defmodule Preprocessor do
     |> Enum.map(fn {_, index} -> index end)
   end
 
-  defp hfun(0), do: 0
-  # TODO: zakladni hfun asi pouzivat nebudeme, pouzijeme jen aproximaci, jeste nevim
   defp hfun(x) when x < 100, do: H.h(x)
 
   defp hfun(count) do
-    :math.log2(count) + 1.332
+    :math.log2(count) + 1.333
   end
 
   # recall, sensitivity
@@ -65,7 +63,6 @@ defmodule Preprocessor do
   end
 
   defp anomaly_score_map(forest, x, batch_size) do
-    IO.inspect(x, label: "evalluju bod")
 
     forest
     |> Forest.evaluate(x, &Service.Novelty.decision/2)
@@ -73,7 +70,6 @@ defmodule Preprocessor do
       %{data: data, depth: depth} -> depth + hfun(length(data))
     end)
     |> Service.Novelty.anomaly_score(batch_size, &hfun/1)
-    |> IO.inspect(label: "bod ziskal score:") # res = {21.635384011766124, 11.332}
     |> then(fn res -> {x, res} end)
   end
 
@@ -92,13 +88,12 @@ end
 def experiment(
         {train, rtest, ntest, dataset_name},
         robustfun,
-        anomaly_treshold \\ 00000..200000//1 |> Enum.map(&(&1 / 10000)),
+        anomaly_treshold \\ 00000..10000//1 |> Enum.map(&(&1 / 10000)) ,
         tree_count \\ 100,
         scorefun \\ &anomaly_score_map/3,
         batch_size \\ min(1024, 1024)
       ) do
 
-    IO.inspect(dataset_name)
     init_range =
       0..(length(Enum.at(train, 0)) - 1)
       |> Enum.map(&robustfun.(train, &1))
@@ -116,17 +111,12 @@ def experiment(
       )
 
 
-    # TODO: SKORE JE ASI SPATNE, je 11.332 pro kazdy bod
     r1 =
       rtest
       |> Enum.map(&scorefun.(forest, &1, batch_size))
       |> then(fn s ->
-        IO.inspect(s)
         Enum.map(anomaly_treshold, &{&1, Enum.count(s, fn {[_ | _], score} -> score < &1 end)})
       end)
-
-    # TODO: JE TAM FURT 0, ORPAV
-    #IO.inspect(r1, limit: :infinity)
 
     n1 =
       ntest
@@ -143,11 +133,6 @@ def experiment(
         tn = (ntest |> length) - n
         ctverice = {tp, f_n, fp, tn}
 
-        # TODO: tady to u thresholdu naraz cele preskoci na druhy breh
-        IO.inspect(threshold)
-        IO.inspect(ctverice)
-
-        #IO.inspect(ctverice)
         tpr = tpr(ctverice)
         fpr = fpr(ctverice)
         {threshold, fbeta2(ctverice, 2), tpr, fpr}
