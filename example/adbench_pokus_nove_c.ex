@@ -6,7 +6,6 @@ Code.require_file("array_splitter/array_splitter.ex", __DIR__)
 # spocita roc a ulozi do csv/ pro kazdy dataset
 
 defmodule Preprocessor do
-
   def take(array, indices) do
     array
     |> Enum.with_index()
@@ -33,7 +32,7 @@ defmodule Preprocessor do
   defp fpr({_tp, _f_n, fp, tn}), do: fp / (fp + tn)
 
   # precision
-  defp ppv({tp, _f_n, fp, _tn}), do: tp / (tp + fp)
+  defp ppv({tp, _f_n, fp, _tn}), do: tp / (tp + fp + 0.000001)
 
   defp for({_tp, f_n, _fp, tn}), do: f_n / (f_n + tn)
 
@@ -63,7 +62,6 @@ defmodule Preprocessor do
   end
 
   defp anomaly_score_map(forest, x, batch_size) do
-
     forest
     |> Forest.evaluate(x, &Service.Novelty.decision/2)
     |> Enum.map(fn
@@ -73,27 +71,29 @@ defmodule Preprocessor do
     |> then(fn res -> {x, res} end)
   end
 
-def auc(roc_data) do
-  # ROC data je list tuple (FPR, TPR) seřazený podle FPR
-  roc_data
-  |> Enum.sort_by(fn {fpr, _} -> fpr end)  # Seřadíme podle FPR
-  |> Enum.chunk_every(2, 1, :discard)  # Vezmeme sousední dvojice
-  |> Enum.map(fn [{fpr1, tpr1}, {fpr2, tpr2}] ->
-    # Trapezoidální pravidlo: (b-a) * (f(a) + f(b)) / 2
-    (fpr2 - fpr1) * (tpr1 + tpr2) / 2
-  end)
-  |> Enum.sum()  # Sečteme plochy pod křivkou
-end
+  def auc(roc_data) do
+    # ROC data je list tuple (FPR, TPR) seřazený podle FPR
+    roc_data
+    # Seřadíme podle FPR
+    |> Enum.sort_by(fn {fpr, _} -> fpr end)
+    # Vezmeme sousední dvojice
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.map(fn [{fpr1, tpr1}, {fpr2, tpr2}] ->
+      # Trapezoidální pravidlo: (b-a) * (f(a) + f(b)) / 2
+      (fpr2 - fpr1) * (tpr1 + tpr2) / 2
+    end)
+    # Sečteme plochy pod křivkou
+    |> Enum.sum()
+  end
 
-def experiment(
+  def experiment(
         {train, rtest, ntest, dataset_name},
         robustfun,
-        anomaly_treshold \\ 00000..10000//1 |> Enum.map(&(&1 / 10000)) ,
+        anomaly_treshold \\ 00000..10000//1 |> Enum.map(&(&1 / 10000)),
         tree_count \\ 100,
         scorefun \\ &anomaly_score_map/3,
         batch_size \\ min(1024, 1024)
       ) do
-
     init_range =
       0..(length(Enum.at(train, 0)) - 1)
       |> Enum.map(&robustfun.(train, &1))
@@ -109,7 +109,6 @@ def experiment(
         Service.Novelty.make_split(ceil(hfun(length(f_train)))),
         &Service.Novelty.batch/2
       )
-
 
     r1 =
       rtest
@@ -134,15 +133,48 @@ def experiment(
         ctverice = {tp, f_n, fp, tn}
 
         tpr = tpr(ctverice)
+        # fpr = fpr(ctverice)
         fpr = fpr(ctverice)
-        {threshold, fbeta2(ctverice, 2), tpr, fpr}
+        {threshold, youden(tpr, fpr), tpr, fpr}
       end)
       |> Enum.map(fn {_thresh, _fb, tpr, fpr} -> {fpr, tpr} end)
 
-
     auc_value = auc(roc)
 
-    File.write!("csv/pokus_nove/roc_data#{dataset_name}_#{auc_value}.csv",
+    statfun =
+      Enum.zip_with([r1, n1], fn [{threshold, r}, {threshold, n}] ->
+        tp = r
+        fp = n
+        f_n = (rtest |> length) - r
+        tn = (ntest |> length) - n
+        ctverice = {tp, f_n, fp, tn}
+
+        tpr = tpr(ctverice)
+        # fpr = fpr(ctverice)
+        fpr = fpr(ctverice)
+        # {threshold, fbeta2(ctverice, 3), tpr, fpr}
+        {threshold, youden(tpr, fpr), tpr, fpr}
+      end)
+      |> Enum.map(fn {thresh, fb, _tpr, _fpr} -> {thresh, fb} end)
+
+    {Enum.at(statfun, 5000), Enum.at(statfun, 6000)} |> IO.inspect(label: "160")
+    statfun |> Enum.max(fn {_, fb1}, {_, fb2} -> fb1 >= fb2 end) |> IO.inspect()
+
+    body = 5000..5000//1000 |> Enum.map(&[&1, Enum.at(roc, &1)])
+
+    # přidá hlavičku
+    csv_content =
+      body
+      |> Enum.map(fn [_, {x, y}] -> "#{x},#{y}" end)
+      |> Enum.join("\n")
+
+    File.write!(
+      "csv/pokus_nove_body/roc_data#{dataset_name}_#{auc_value}.csv",
+      csv_content
+    )
+
+    File.write!(
+      "csv/pokus_nove/roc_data#{dataset_name}_#{auc_value}.csv",
       roc
       |> Enum.map(fn {fpr, tpr} -> "#{fpr},#{tpr}" end)
       |> Enum.join("\n")
@@ -150,7 +182,7 @@ def experiment(
 
     IO.puts("AUC: #{auc_value}")
     {"AUC", auc_value}
-end
+  end
 end
 
 datasets =
@@ -175,7 +207,7 @@ for dataset <- datasets do
 
   # specify statistics
   {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.z_score(x, 3, y) end)
-  #{r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.adjusted_box(x, y) end)
+  # {r, n} = Preprocessor.experiment(tt, fn x, y -> Statistex.Robust.adjusted_box(x, y) end)
 
   "regular #{rtest |> length}" |> IO.inspect()
   r |> IO.inspect()
