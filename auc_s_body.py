@@ -3,8 +3,8 @@ import pandas as pd
 import os
 
 # Složky
-roc_folder = "csv/pokus_nove"
-points_folder = "csv/pokus_nove_body"
+roc_folder = "csv/pokus_youden_05"
+points_folder = "csv/pokus_youden_body_05"
 
 # Inicializace grafu
 plt.figure()

@@ -26,6 +26,18 @@ defmodule Preprocessor do
     :math.log2(count) + 1.333
   end
 
+  # defp hfun(n) when n <= 1, do: 0.0
+
+  # defp hfun(n) when n < 100 do
+  #   h = Enum.reduce(1..(n - 1), 0.0, fn k, acc -> acc + 1.0 / k end)
+  #   2 * h - (2 * (n - 1) / n)
+  # end
+
+  # defp hfun(n) do
+  #   h = :math.log(n - 1) + 0.5772156649
+  #   2 * h - (2 * (n - 1) / n)
+  # end
+
   # recall, sensitivity
   defp tpr({tp, f_n, _fp, _tn}), do: tp / (tp + f_n)
 
@@ -133,7 +145,6 @@ defmodule Preprocessor do
         ctverice = {tp, f_n, fp, tn}
 
         tpr = tpr(ctverice)
-        # fpr = fpr(ctverice)
         fpr = fpr(ctverice)
         {threshold, youden(tpr, fpr), tpr, fpr}
       end)
@@ -150,29 +161,37 @@ defmodule Preprocessor do
         ctverice = {tp, f_n, fp, tn}
 
         tpr = tpr(ctverice)
-        # fpr = fpr(ctverice)
         fpr = fpr(ctverice)
-        # {threshold, fbeta2(ctverice, 3), tpr, fpr}
         {threshold, youden(tpr, fpr), tpr, fpr}
       end)
       |> Enum.map(fn {thresh, fb, _tpr, _fpr} -> {thresh, fb} end)
 
     {Enum.at(statfun, 5000), Enum.at(statfun, 6000)} |> IO.inspect(label: "160")
-    statfun |> Enum.max(fn {_, fb1}, {_, fb2} -> fb1 >= fb2 end) |> IO.inspect()
 
-    body = 5000..5000//1000 |> Enum.map(&[&1, Enum.at(roc, &1)])
+    # Najdeme nejlepší threshold podle Youdenova indexu
+    {best_threshold, _} =
+      statfun
+      |> Enum.max_by(fn {_, fb} -> fb end)
 
-    # přidá hlavičku
-    csv_content =
-      body
-      |> Enum.map(fn [_, {x, y}] -> "#{x},#{y}" end)
-      |> Enum.join("\n")
+    best_index = Enum.find_index(anomaly_treshold, &(&1 == best_threshold))
+    best_point = Enum.at(roc, best_index)
 
+    # Najdeme také bod pro threshold 0.5 (index 5000)
+    point_05 = Enum.at(roc, 5000)
+
+    # Zapíšeme nejlepší bod (Youden)
     File.write!(
-      "csv/pokus_nove_body/roc_data#{dataset_name}_#{auc_value}.csv",
-      csv_content
+      "csv/pokus_nove_body/roc_best_#{dataset_name}_#{auc_value}.csv",
+      "#{elem(best_point, 0)},#{elem(best_point, 1)},#{best_threshold}"
     )
 
+    # Zapíšeme bod pro threshold = 0.5
+    File.write!(
+      "csv/pokus_nove_body/roc_05_#{dataset_name}_#{auc_value}.csv",
+      "#{elem(point_05, 0)},#{elem(point_05, 1)}"
+    )
+
+    # Zapíšeme celou ROC křivku
     File.write!(
       "csv/pokus_nove/roc_data#{dataset_name}_#{auc_value}.csv",
       roc
