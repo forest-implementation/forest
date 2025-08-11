@@ -93,7 +93,6 @@ plt.plot([0, 1], [0, 1], "r--", label="Random Guess")
 # Osy, legenda, vzhled
 plt.xlabel("False Positive Rate (FPR)")
 plt.ylabel("True Positive Rate (TPR)")
-plt.title("ROC křivky s vyznačenými prahy")
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 plt.grid(True)
 
