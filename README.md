@@ -1,10 +1,7 @@
-nejrpve spust nejaky pokus ktery vygeneruje csvcka:
+zacit bys mel elixirem
+MIX_ENV=example mix run example/totospust.ex
+ten ti udela pekne csvcka, muzes chat donutit at udela cokoliv statistiku jakou chces
 
-(muzes si zvolit h funkci a taky dole si odkomentuj zscore nebo adjusted box)
-
-MIX_ENV=example mix run example/adbench_pokus_nove_c.ex
-
-a pak analyzuj grafy:
-
-python auc.py
+a pak uz python, napriklad:
+porovnej_range_metody.py
 

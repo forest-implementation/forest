@@ -1,0 +1,27 @@
+AUC statistics report
+========================================================================
+Methods: ['adjusted', 'mad', 'zscore_more_trees']
+Blocks (paired observations): N = 44
+
+Friedman test (global difference across methods)
+------------------------------------------------------------------------
+Statistic (chi-square): 9.360000
+p-value: 0.00927901
+alpha: 0.05
+Decision: REJECT H0
+
+Mean ranks (lower is better; rank 1 = best per block)
+------------------------------------------------------------------------
+zscore_more_trees     1.693182
+adjusted              1.965909
+mad                   2.340909
+
+Nemenyi post-hoc pairwise p-values (family-wise controlled)
+------------------------------------------------------------------------
+                   zscore_more_trees  adjusted        mad
+zscore_more_trees                  1  0.406928 0.00672857
+adjusted                    0.406928         1   0.183607
+mad                       0.00672857  0.183607          1
+
+Significant pairs at alpha=0.05:
+- mad vs zscore_more_trees: p=0.00672857

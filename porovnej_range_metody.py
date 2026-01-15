@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+# TOTO SPUST KDYZ CHCES PDF GRAFY ROC PRO KAZDY DATASET
+# MUSI TOMU PREDCHAZET SPUSTENI ELIXIR SKRIPTU:
+# MIX_ENV=example mix run example/totospust.ex
+
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -95,19 +99,19 @@ for dataset_name in sorted(all_datasets):
 
             data = pd.read_csv(file_path, header=None, names=["FPR", "TPR"])
 
-            linestyle = "-" if method == "adjusted" else ("--" if method == "mad" else ":")
+            #linestyle = "-" if method == "adjusted" else ("--" if method == "mad" else ":")
+            mm = "adjusted box" if method == "adjusted" else ("MAD" if method == "mad" else "z-score")
             ax.plot(
                 data["FPR"], data["TPR"],
-                linestyle=linestyle,
                 marker="o",
                 markersize=1,
                 linewidth=1.2,
-                label=rf"{method} ({remaining_part})",
+                label=rf"{mm}",
                 color=method_colors[method],
             )
 
     # Random baseline
-    ax.plot([0, 1], [0, 1], linestyle="--", linewidth=1.0, label="Random Guess")
+    ax.plot([0, 1], [0, 1], linestyle="--", linewidth=0.5, label="Random Guess",color="black")
 
     # Axis labels (no title, consistent with your LaTeX style)
     ax.set_xlabel(r"False Positive Rate (FPR)")
@@ -136,7 +140,7 @@ for dataset_name in sorted(all_datasets):
         add_right_center_legend(ax)
 
     fig.tight_layout()
-    fig.savefig(os.path.join(out_dir, f"ROC_{dataset_name}.svg"), format="svg", bbox_inches="tight")
+    fig.savefig(os.path.join(out_dir, f"ROC_{dataset_name}.pdf"), format="pdf", bbox_inches="tight")
     plt.close(fig)
 
 print("done")
