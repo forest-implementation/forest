@@ -21,12 +21,24 @@ defmodule Preprocessor do
     |> Enum.map(fn {_, index} -> index end)
   end
 
-  defp cfun(0), do: 0
-  defp cfun(x) when x < 100, do: H.h(x)
-
-  defp cfun(count) do
-    :math.log2(count) + 1.332
+  # 
+  def harmonic_num(n) do
+    1..n |> Stream.map(&(1.0 / &1)) |> Enum.sum()
   end
+
+  def cfun(n) when n < 2, do: 0
+  def cfun(2), do: 1
+
+  def cfun(batch_size) do
+    2 * harmonic_num(batch_size - 1) - 2 * (batch_size - 1) / batch_size
+  end
+
+ # defp cfun(0), do: 0
+ # defp cfun(x) when x < 100, do: H.h(x)
+
+ # defp cfun(count) do
+ #   :math.log2(count) + 1.332
+ # end
 
   # recall, sensitivity
   defp tpr({tp, f_n, _fp, _tn}), do: tp / (tp + f_n)
@@ -65,7 +77,7 @@ defmodule Preprocessor do
   defp youden(tpr, fpr), do: tpr - fpr
 
   def preprocess(dataset_name) do
-    %{"TE" => regular_test, "TR" => regular_train} =
+    %{"TA" => regular_test, "TR" => regular_train} =
       DataPreparator.adbench("example/data/adbench/csv/#{dataset_name}_TTV.csv", -2)
 
     %{"TE" => novelty_test} =
@@ -202,23 +214,23 @@ def experiment(
     |> auc()
 
   # --- výstupy do CSV ---
-  File.mkdir_p!("conference/csv_our2/roc_curves")
-  File.mkdir_p!("conference/csv_our2/auc")
-  File.mkdir_p!("conference/csv_our2/confusion")
+  File.mkdir_p!("conference/csv_our_bezcary/roc_curves")
+  File.mkdir_p!("conference/csv_our_bezcary/auc")
+  File.mkdir_p!("conference/csv_our_bezcary/confusion")
 
   roc_by_fpr = roc_pts |> Enum.sort_by(fn {_th, fpr, _tpr} -> fpr end)
-  File.write!("conference/csv_our2/roc_curves/#{dataset_name}.csv",
+  File.write!("conference/csv_our_bezcary/roc_curves/#{dataset_name}.csv",
     (["threshold,fpr,tpr"] ++ Enum.map(roc_by_fpr, fn {th, fpr, tpr} -> "#{th},#{fpr},#{tpr}" end))
     |> Enum.join("\n")
   )
 
   roc_by_th = roc_pts |> Enum.sort_by(fn {th, _fpr, _tpr} -> th end)
-  File.write!("conference/csv_our2/roc_curves/#{dataset_name}_by_threshold.csv",
+  File.write!("conference/csv_our_bezcary/roc_curves/#{dataset_name}_by_threshold.csv",
     (["threshold,fpr,tpr"] ++ Enum.map(roc_by_th, fn {th, fpr, tpr} -> "#{th},#{fpr},#{tpr}" end))
     |> Enum.join("\n")
   )
 
-  File.write!("conference/csv_our2/auc/#{dataset_name}.csv", "auc\n#{auc_value}\n")
+  File.write!("conference/csv_our_bezcary/auc/#{dataset_name}.csv", "auc\n#{auc_value}\n")
 
   conf_rows =
     Enum.map(acc.rows, fn {th, fp, tp, fn_, tn} ->
@@ -230,7 +242,7 @@ def experiment(
       "#{th},#{tp},#{fp},#{fn_},#{tn},#{tpr_val},#{fpr_val},#{precision},#{recall},#{f1}"
     end)
 
-  File.write!("conference/csv_our2/confusion/#{dataset_name}.csv",
+  File.write!("conference/csv_our_bezcary/confusion/#{dataset_name}.csv",
     (["threshold,tp,fp,fn,tn,tpr,fpr,precision,recall,f1"] ++ conf_rows)
     |> Enum.join("\n")
   )
